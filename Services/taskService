@@ -1,0 +1,79 @@
+const tasks = require("../Models/tasks.json").tasks;
+
+const getAllTasks = (req,res) => {
+    const completed = req.query.completed === 'true';
+    const sortBy = req.query.sortBy;
+    const sortDirection = req.query.sortDirection===undefined?
+        'asc':req.query.sortDirection.toLowerCase();
+    let filteredTask = tasks;
+    console.log(`Recieved the filtering condition: ${completed}, sort by : ${sortBy} with direction ${sortDirection} `);
+    if(req.query.completed!== undefined){
+        filteredTask = filteredTask.filter(task=>task.completed===completed)
+        console.log(`Found total of tasks ${filteredTask.length}`);
+    }
+    if(sortBy){
+        // console.log(`before sorting : ${filteredTask.map(task=>task.createdDate).join(', ')}`);
+        filteredTask = filteredTask.sort((a,b)=>{
+            const date1 = new Date(a.createdDate);
+            const date2 = new Date(b.createdDate);
+            // console.log(`date1: ${date1} date2: ${date2}`);
+            return sortDirection === 'desc'?
+                date2-date1 // newest first
+                :date1-date2;
+        });
+        console.log(`Post sorting : ${filteredTask.map(task=>task.createdDate).join(', ')}`);
+    }
+    res.data = filteredTask;
+    res.send(filteredTask);
+}
+
+const getTaskById = (req,res) => {
+    console.log("Getting task with id:",req.params.id);
+    const task  = tasks.find(task=>task.id === parseInt(req.params.id));
+    if(!task){
+        return res.status(404).send("Task Not found");
+    }
+    res.send(task);
+}
+
+const createTask = (req,res) => {
+    const task = req.body;
+    console.log("Create task with request:",task);
+    if(req.body.description === "" || req.body.title === ""){
+        res.status(400).send("Description and Title cannot be null");
+    }
+    if(req.body.completed!="" && typeof req.body.completed !== "boolean"){
+        res.status(400).send("Completed to be boolean or cannot be null");
+    }
+    const id = tasks[tasks.length-1].id;
+    console.log("Latest Id of Task is",id);
+    task["id"] = id+1;
+    tasks.push(task);
+    res.send(task);
+}
+
+const updateTask = (req,res) => {
+    console.log("Updating task:",req.body);
+    const task = tasks.find(t=>t.id === parseInt(req.params.id));
+    const idx = tasks.findIndex(t=>t.id === parseInt(req.params.id));
+    tasks[idx] = task;
+    res.send(task);
+}
+
+const deleteTaskById = (req,res) => {
+    console.log("Delete task id :",req.params.id);
+    const task  = tasks.find(task=>task.id === parseInt(req.params.id));
+    if(!task){
+        return res.status(404).send(`Task Not found`);
+    }
+    tasks.splice(tasks.indexOf(task),1);
+    res.send(`Task: ${req.params.id} Deleted`);
+}
+
+module.exports = {
+    getAllTasks,
+    getTaskById,
+    createTask,
+    updateTask,
+    deleteTaskById
+};
